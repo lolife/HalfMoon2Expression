@@ -60,11 +60,6 @@ void loop() {
 
   dacWrite(DAC_PIN, dacValue);
   
-  // Calculate voltage for display
-  //float voltage = (dacValue / 255.0) * 3.3;
-  //Serial.printf( "voltage = %0.2f\n", voltage );
-  updateDisplay();
-  
   delay(10);
 }
 
