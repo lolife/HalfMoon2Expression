@@ -11,29 +11,24 @@ M5Go   G21   G22   G26   G36   G16   G17
 CoreS3  G2    G1    G9    G8   G17   G18
  */
 
-// 🟦 Port C 🟦 
+// 🟦 Port C 🟦
 #ifdef CORE
 static constexpr int TIP_PIN  = GPIO_NUM_17;  // RUN/STOP (tip)
 static constexpr int RING_PIN = GPIO_NUM_16;  // SLOW/FAST (ring)
 const int DAC_PIN = 26; //  ⬛️ Port B ⬛️  yellow wire
-#elifdef CORES3
-static constexpr int TIP_PIN  = GPIO_NUM_18;  // RUN/STOP (tip)
-static constexpr int RING_PIN = GPIO_NUM_17;  // SLOW/FAST (ring)
-const int DAC_PIN = GPIO_NUM_9; //  ⬛️ Port B ⬛️  yellow wire
 #endif
 
 LeslieState leslie = { false, false };
 
 // DAC configuration
 const int DAC_MAX = 255; // 8-bit DAC (0-3.3V)
-const int PWM_PIN = GPIO_NUM_9;
-const int PWM_CH = 0;
-const int PWM_FREQ = 20000;   // 20 kHz
-const int PWM_RES = 8;        // 0..255
 
 // Display update
 unsigned long lastDisplayUpdate = 0;
-const int DISPLAY_INTERVAL = 50; // ms
+const int DISPLAY_INTERVAL = 500; // ms
+
+  bool sw1 = false;
+  bool sw2 = false;
 
 void updateDisplay();
 void updateLeslieState();
@@ -44,14 +39,9 @@ void setup() {
   M5.begin(cfg);
   
   // Initialize DAC
-  #ifdef CORE
+#ifdef CORE
   dacWrite(DAC_PIN, 0);
-  #elifdef CORES3
-  //pinMode( DAC_PIN, OUTPUT );
-  ledcAttach( PWM_PIN, PWM_FREQ, PWM_RES );
-  //ledcSetup(PWM_CH, PWM_FREQ, PWM_RES);
-  //ledcAttachPin(PWM_PIN, PWM_CH);
-  #endif
+#endif
 
   // Initialize Half Moon
   pinMode(TIP_PIN, INPUT_PULLUP );
@@ -82,13 +72,10 @@ void loop() {
 
 #ifdef CORE
   dacWrite(DAC_PIN, dacValue);
-#else
-  //analogWrite( DAC_PIN, dacValue );
-  ledcWrite(PWM_PIN, dacValue);
 #endif
 
   static long lastDisplayUpdate = 0;
-  if( millis() - lastDisplayUpdate > 500 ) {
+  if( millis() - lastDisplayUpdate > DISPLAY_INTERVAL ) {
     updateDisplay();
     lastDisplayUpdate = millis();
   }
@@ -104,13 +91,15 @@ void updateDisplay() {
   M5.Display.printf(" State : %s", leslie.leslieON ? "ON" : "OFF" );
   
   // Display roll (for reference)
-  M5.Display.setCursor(10, 50 + M5.Display.fontHeight()+5);
+  M5.Display.setCursor(10, M5.Display.getCursorY() + M5.Display.fontHeight()+5 );
   M5.Display.printf("Speed: %s", leslie.leslieFast ? "FAST" : "SLOW" );
+  M5.Display.setCursor(10, M5.Display.getCursorY() + M5.Display.fontHeight()+5);
+  M5.Display.printf("Tip: %d, Ring: %d", sw1, sw2 );
 }
 
 void updateLeslieState() {
-  bool sw1 = digitalRead(TIP_PIN);
-  bool sw2 = digitalRead(RING_PIN);
+  sw1 = digitalRead(TIP_PIN);
+  sw2 = digitalRead(RING_PIN);
 
   if (sw2 == LOW) {
     leslie.leslieFast = false;
