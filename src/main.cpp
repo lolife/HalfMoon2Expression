@@ -5,15 +5,20 @@ typedef struct {
   bool leslieON;
   bool leslieFast;
 } LeslieState;
+/*
+       A_Y   A_W	 B_Y   B_W   C_Y   C_W
+M5Go   G21   G22   G26   G36   G16   G17
+CoreS3  G2    G1    G9    G8   G17   G18
+ */
 
-// Port C on the M5Go
-static constexpr int TIP_PIN  = GPIO_NUM_16;  // RUN/STOP (tip)
-static constexpr int RING_PIN = GPIO_NUM_17;  // SLOW/FAST (ring)
+// 🟦 Port C 🟦 
+static constexpr int TIP_PIN  = GPIO_NUM_17;  // RUN/STOP (tip)
+static constexpr int RING_PIN = GPIO_NUM_16;  // SLOW/FAST (ring)
 
 LeslieState leslie = { false, false };
 
 // DAC configuration
-const int DAC_PIN = 26; // GPIO25 is DAC1 on ESP32 which is Port B yellow
+const int DAC_PIN = 26; //  ⬛️ Port B ⬛️  yellow wire
 const int DAC_MAX = 255; // 8-bit DAC (0-3.3V)
 
 // Display update
@@ -59,7 +64,7 @@ void loop() {
     dacValue = 0;
 
   dacWrite(DAC_PIN, dacValue);
-  
+  updateDisplay();
   delay(10);
 }
 
