@@ -12,14 +12,24 @@ CoreS3  G2    G1    G9    G8   G17   G18
  */
 
 // 🟦 Port C 🟦 
+#ifdef CORE
 static constexpr int TIP_PIN  = GPIO_NUM_17;  // RUN/STOP (tip)
 static constexpr int RING_PIN = GPIO_NUM_16;  // SLOW/FAST (ring)
+const int DAC_PIN = 26; //  ⬛️ Port B ⬛️  yellow wire
+#elifdef CORES3
+static constexpr int TIP_PIN  = GPIO_NUM_18;  // RUN/STOP (tip)
+static constexpr int RING_PIN = GPIO_NUM_17;  // SLOW/FAST (ring)
+const int DAC_PIN = GPIO_NUM_9; //  ⬛️ Port B ⬛️  yellow wire
+#endif
 
 LeslieState leslie = { false, false };
 
 // DAC configuration
-const int DAC_PIN = 26; //  ⬛️ Port B ⬛️  yellow wire
 const int DAC_MAX = 255; // 8-bit DAC (0-3.3V)
+const int PWM_PIN = GPIO_NUM_9;
+const int PWM_CH = 0;
+const int PWM_FREQ = 20000;   // 20 kHz
+const int PWM_RES = 8;        // 0..255
 
 // Display update
 unsigned long lastDisplayUpdate = 0;
@@ -29,16 +39,23 @@ void updateDisplay();
 void updateLeslieState();
 
 void setup() {
-  Serial.begin(115200);
+  //Serial.begin(115200);
   auto cfg = M5.config();
   M5.begin(cfg);
   
   // Initialize DAC
+  #ifdef CORE
   dacWrite(DAC_PIN, 0);
-  
+  #elifdef CORES3
+  //pinMode( DAC_PIN, OUTPUT );
+  ledcAttach( PWM_PIN, PWM_FREQ, PWM_RES );
+  //ledcSetup(PWM_CH, PWM_FREQ, PWM_RES);
+  //ledcAttachPin(PWM_PIN, PWM_CH);
+  #endif
+
   // Initialize Half Moon
-  pinMode(TIP_PIN, INPUT_PULLUP);
-  pinMode(RING_PIN, INPUT);
+  pinMode(TIP_PIN, INPUT_PULLUP );
+  pinMode(RING_PIN, INPUT );
   
   // Setup display
   M5.Display.setRotation(1);
@@ -63,20 +80,22 @@ void loop() {
   else
     dacValue = 0;
 
+#ifdef CORE
   dacWrite(DAC_PIN, dacValue);
-  updateDisplay();
+#else
+  //analogWrite( DAC_PIN, dacValue );
+  ledcWrite(PWM_PIN, dacValue);
+#endif
+
+  static long lastDisplayUpdate = 0;
+  if( millis() - lastDisplayUpdate > 500 ) {
+    updateDisplay();
+    lastDisplayUpdate = millis();
+  }
   delay(10);
 }
 
 void updateDisplay() {
-  unsigned long now = millis();
-  if (now - lastDisplayUpdate < DISPLAY_INTERVAL)
-    return;
-
-  lastDisplayUpdate = now;
-  
-  M5.Display.setTextSize(1);
-  
   // Clear previous values area
   M5.Display.fillRect(130, 35, 125, 110, BLACK );
   
@@ -93,9 +112,13 @@ void updateLeslieState() {
   bool sw1 = digitalRead(TIP_PIN);
   bool sw2 = digitalRead(RING_PIN);
 
-  leslie.leslieON   = (sw1 == 0) || (sw2 == 1);
-  leslie.leslieFast = (sw1 == 1 && sw2 == 1);
+  if (sw2 == LOW) {
+    leslie.leslieFast = false;
+    leslie.leslieON = (sw1 == LOW);   // LL -> ON, HL -> OFF
+  } else if (sw1 == HIGH) {
+    leslie.leslieON = true;           // HH -> ON/FAST
+    leslie.leslieFast = true;
+  }
 
   return;
 }
-
