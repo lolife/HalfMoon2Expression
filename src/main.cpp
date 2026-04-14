@@ -13,9 +13,13 @@ CoreS3  G2    G1    G9    G8   G17   G18
 
 // 🟦 Port C 🟦
 #ifdef CORE
+static constexpr int TIP_PIN  = GPIO_NUM_18;  // RUN/STOP (tip)
+static constexpr int RING_PIN = GPIO_NUM_17;  // SLOW/FAST (ring)
+const int DAC_PIN = GPIO_NUM_9; //  ⬛️ Port B ⬛️  yellow wire
+#else
 static constexpr int TIP_PIN  = GPIO_NUM_17;  // RUN/STOP (tip)
 static constexpr int RING_PIN = GPIO_NUM_16;  // SLOW/FAST (ring)
-const int DAC_PIN = 26; //  ⬛️ Port B ⬛️  yellow wire
+const int DAC_PIN = GPIO_NUM_26; //  ⬛️ Port B ⬛️  yellow wire
 #endif
 
 LeslieState leslie = { false, false };
@@ -39,9 +43,7 @@ void setup() {
   M5.begin(cfg);
   
   // Initialize DAC
-#ifdef CORE
   dacWrite(DAC_PIN, 0);
-#endif
 
   // Initialize Half Moon
   pinMode(TIP_PIN, INPUT_PULLUP );
@@ -70,9 +72,7 @@ void loop() {
   else
     dacValue = 0;
 
-#ifdef CORE
   dacWrite(DAC_PIN, dacValue);
-#endif
 
   static long lastDisplayUpdate = 0;
   if( millis() - lastDisplayUpdate > DISPLAY_INTERVAL ) {
